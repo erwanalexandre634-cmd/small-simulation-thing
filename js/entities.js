@@ -166,6 +166,104 @@ class House extends Entity {
 }
 
 /**
+ * Feu de camp - Source de chaleur et lumière (technologie "fire")
+ * Visuel : Flammes animées avec particules
+ */
+class Campfire extends Entity {
+    constructor(x, y) {
+        super(x, y, 'campfire');
+        this.fuel = 100; // Combustible (diminue avec le temps)
+        this.intensity = 1.0; // Intensité du feu (0-1)
+        this.heat = 10; // Rayon de chaleur en tuiles
+        this.animationOffset = Math.random() * Math.PI * 2; // Pour animation variée
+    }
+
+    update() {
+        // Le feu consomme du combustible lentement
+        this.fuel -= 0.01;
+
+        // Intensité varie avec le combustible
+        this.intensity = Math.max(0, Math.min(1, this.fuel / 100));
+
+        // Le feu s'éteint quand plus de combustible
+        if (this.fuel <= 0) {
+            return false; // Feu éteint
+        }
+
+        return true; // Feu allumé
+    }
+
+    draw(ctx, tileSize) {
+        if (this.intensity <= 0) return;
+
+        const centerX = this.x * tileSize + tileSize / 2;
+        const centerY = this.y * tileSize + tileSize / 2;
+
+        // Bois/pierres à la base
+        ctx.fillStyle = '#5d4037';
+        ctx.beginPath();
+        ctx.arc(centerX, centerY + tileSize * 0.1, tileSize * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Flammes animées (3 couches)
+        const time = Date.now() / 100 + this.animationOffset;
+
+        // Flamme externe (rouge-orange)
+        this.drawFlame(ctx, centerX, centerY, tileSize * 0.5 * this.intensity,
+                       `rgba(255, 69, 0, ${0.6 * this.intensity})`, time);
+
+        // Flamme moyenne (orange)
+        this.drawFlame(ctx, centerX, centerY - tileSize * 0.1, tileSize * 0.35 * this.intensity,
+                       `rgba(255, 140, 0, ${0.7 * this.intensity})`, time + 0.5);
+
+        // Flamme interne (jaune)
+        this.drawFlame(ctx, centerX, centerY - tileSize * 0.15, tileSize * 0.2 * this.intensity,
+                       `rgba(255, 215, 0, ${0.8 * this.intensity})`, time + 1);
+
+        // Lueur ambiante
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, tileSize * 1.5);
+        gradient.addColorStop(0, `rgba(255, 140, 0, ${0.3 * this.intensity})`);
+        gradient.addColorStop(1, 'rgba(255, 140, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, tileSize * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    drawFlame(ctx, x, y, size, color, time) {
+        // Forme de flamme organique qui ondule
+        ctx.fillStyle = color;
+        ctx.beginPath();
+
+        const points = 8;
+        for (let i = 0; i < points; i++) {
+            const angle = (i / points) * Math.PI * 2;
+            const wave = Math.sin(time + i) * 0.2;
+            const radius = size * (1 + wave);
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
+
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    // Vérifie si une position est dans la zone de chaleur
+    isInHeatRange(x, y) {
+        const dx = x - this.x;
+        const dy = y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance <= this.heat && this.intensity > 0;
+    }
+}
+
+/**
  * Humain - Entité autonome avec IA et évolution
  * Visuel : Tête + corps + bras/jambes
  */
@@ -690,6 +788,7 @@ class EntityManager {
         this.trees = [];
         this.rocks = [];
         this.houses = [];
+        this.campfires = []; // NOUVEAU: Feux de camp
         this.humans = [];
 
         this.totalBirths = 0;
@@ -798,6 +897,32 @@ class EntityManager {
             culture.update();
         }
 
+        // NOUVEAU: Mettre à jour les feux de camp
+        const activeCampfires = [];
+        for (let campfire of this.campfires) {
+            if (campfire.update()) {
+                activeCampfires.push(campfire);
+            }
+        }
+        this.campfires = activeCampfires;
+
+        // NOUVEAU: Créer un feu si la tech "fire" est débloquée et pas de feu existant
+        if (culture && culture.unlockedTechs.includes('fire')) {
+            // Créer un feu central pour le camp si pas encore fait
+            if (this.campfires.length === 0 && this.houses.length > 0 && Math.random() < 0.01) {
+                // Trouver le centre du camp (moyenne des maisons)
+                let avgX = 0, avgY = 0;
+                this.houses.forEach(h => { avgX += h.x; avgY += h.y; });
+                avgX = Math.floor(avgX / this.houses.length);
+                avgY = Math.floor(avgY / this.houses.length);
+
+                this.campfires.push(new Campfire(avgX, avgY));
+                if (eventLog) {
+                    eventLog.logEvent('🔥 Un feu de camp a été allumé !', 'tech');
+                }
+            }
+        }
+
         const newHumans = [];
         const populationCap = culture ? culture.modifiers.populationCap : 10;
 
@@ -854,6 +979,11 @@ class EntityManager {
 
         for (let house of this.houses) {
             house.draw(ctx, tileSize);
+        }
+
+        // NOUVEAU: Dessiner les feux de camp (après les maisons, avant les humains)
+        for (let campfire of this.campfires) {
+            campfire.draw(ctx, tileSize);
         }
 
         for (let human of this.humans) {
