@@ -25,7 +25,7 @@ class HumanInspector {
      */
     createInspectorPanel() {
         const html = `
-            <div id="humanInspector" class="human-inspector">
+            <div id="humanInspector" class="human-inspector hidden">
                 <div class="inspector-header">
                     <h3>👤 Inspecteur</h3>
                     <button class="inspector-close" id="inspectorClose">×</button>
@@ -34,6 +34,9 @@ class HumanInspector {
                     <p class="inspector-empty">Survolez un humain pour voir ses détails</p>
                 </div>
             </div>
+            <div id="humanTooltip" class="human-tooltip" style="display: none;">
+                <span id="tooltipText"></span>
+            </div>
         `;
 
         document.body.insertAdjacentHTML('beforeend', html);
@@ -41,6 +44,8 @@ class HumanInspector {
         this.panel = document.getElementById('humanInspector');
         this.content = document.getElementById('inspectorContent');
         this.closeBtn = document.getElementById('inspectorClose');
+        this.tooltip = document.getElementById('humanTooltip');
+        this.tooltipText = document.getElementById('tooltipText');
 
         this.closeBtn.addEventListener('click', () => {
             this.panel.classList.add('hidden');
@@ -81,6 +86,14 @@ class HumanInspector {
                 closestDist = dist;
             }
         });
+
+        // Afficher le tooltip avec le nom si on survole un humain
+        if (closest) {
+            const name = closest.name || `Humain #${closest.id ? closest.id.substr(0, 4) : '?'}`;
+            this.showTooltip(name, mouseEvent.clientX, mouseEvent.clientY);
+        } else {
+            this.hideTooltip();
+        }
 
         return closest;
     }
@@ -172,11 +185,15 @@ class HumanInspector {
     }
 
     /**
-     * Affiche l'état vide
+     * Affiche l'état vide (et cache le panel)
      */
     showEmpty() {
         this.content.innerHTML = '<p class="inspector-empty">Survolez un humain pour voir ses détails</p>';
         this.selectedHuman = null;
+        // Cacher le panel quand on ne survole rien
+        this.panel.classList.add('hidden');
+        // Cacher aussi le tooltip
+        this.hideTooltip();
     }
 
     /**
@@ -224,6 +241,25 @@ class HumanInspector {
                 ${human.actionProgress !== undefined ? `<span class="action-progress">(${progress}%)</span>` : ''}
             </span>
         `;
+    }
+
+    /**
+     * Affiche le tooltip avec le nom de l'humain
+     */
+    showTooltip(text, x, y) {
+        this.tooltipText.textContent = text;
+        this.tooltip.style.display = 'block';
+        this.tooltip.style.left = (x + 15) + 'px';
+        this.tooltip.style.top = (y - 30) + 'px';
+    }
+
+    /**
+     * Cache le tooltip
+     */
+    hideTooltip() {
+        if (this.tooltip) {
+            this.tooltip.style.display = 'none';
+        }
     }
 
     /**

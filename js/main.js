@@ -82,11 +82,11 @@ class Simulation {
         // Mettre à jour l'affichage initial
         this.updateUI();
 
-        // Effectuer le rendu initial
-        this.render();
-
         // Logger l'initialisation
         this.eventLog.logEvent('Le monde a été créé', 'info');
+
+        // Démarrer la boucle de rendu (tourne toujours, même en pause)
+        this.startRenderLoop();
     }
 
     initControls() {
@@ -129,7 +129,6 @@ class Simulation {
             this.elements.mainPlayText.textContent = 'En cours...';
             this.elements.mainPlayBtn.classList.add('playing');
             this.lastFrameTime = performance.now();
-            this.start();
         } else {
             this.elements.mainPlayIcon.textContent = '▶';
             this.elements.mainPlayText.textContent = 'Evolution Simulator';
@@ -158,24 +157,35 @@ class Simulation {
     }
 
     start() {
-        if (this.isRunning) {
-            requestAnimationFrame((timestamp) => this.loop(timestamp));
-        }
+        // Démarrer la boucle de rendu (qui tourne toujours, même en pause)
+        this.startRenderLoop();
     }
 
-    loop(timestamp) {
-        if (!this.isRunning) return;
+    startRenderLoop() {
+        requestAnimationFrame((timestamp) => this.renderLoop(timestamp));
+    }
 
+    renderLoop(timestamp) {
         const deltaTime = timestamp - this.lastFrameTime;
 
         if (deltaTime >= this.frameInterval) {
             this.lastFrameTime = timestamp;
 
-            this.update();
+            // Mettre à jour UNIQUEMENT si la simulation est en cours
+            if (this.isRunning) {
+                this.update();
+            }
+
+            // Rendre TOUJOURS (même en pause) pour voir le zoom/drag
             this.render();
         }
 
-        requestAnimationFrame((ts) => this.loop(ts));
+        requestAnimationFrame((ts) => this.renderLoop(ts));
+    }
+
+    loop(timestamp) {
+        // Méthode deprecated, gardée pour compatibilité
+        this.renderLoop(timestamp);
     }
 
     update() {
@@ -195,8 +205,8 @@ class Simulation {
         // Tracker la recherche actuelle pour détecter les changements
         const previousResearch = this.culture.currentResearchId;
 
-        // Mettre à jour les entités (avec culture et event log)
-        this.entityManager.update(this.culture, this.eventLog, this.currentYear);
+        // Mettre à jour les entités (avec culture, event log ET vitesse de simulation)
+        this.entityManager.update(this.culture, this.eventLog, this.currentYear, this.speed);
 
         // NOUVEAU : Mettre à jour les bâtiments
         this.buildingManager.update(this.culture, this.eventLog);

@@ -161,9 +161,20 @@ class Camera {
         const viewWidth = this.canvas.width / this.zoom;
         const viewHeight = this.canvas.height / this.zoom;
 
-        // Empêcher de sortir de la carte
-        this.x = this.clamp(this.x, this.minX, this.maxX - viewWidth);
-        this.y = this.clamp(this.y, this.minY, this.maxY - viewHeight);
+        // Si la vue est plus grande que la carte (zoom out max), centrer la carte
+        if (viewWidth >= this.maxX) {
+            this.x = (this.maxX - viewWidth) / 2;
+        } else {
+            // Empêcher de sortir de la carte (à gauche/droite)
+            this.x = this.clamp(this.x, this.minX, this.maxX - viewWidth);
+        }
+
+        if (viewHeight >= this.maxY) {
+            this.y = (this.maxY - viewHeight) / 2;
+        } else {
+            // Empêcher de sortir de la carte (haut/bas)
+            this.y = this.clamp(this.y, this.minY, this.maxY - viewHeight);
+        }
     }
 
     /**

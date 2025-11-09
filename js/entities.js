@@ -231,23 +231,23 @@ class Human extends Entity {
         return Math.max(min, Math.min(max, value));
     }
 
-    update(map, entities, culture) {
-        // Vieillir
-        this.age += 0.01;
+    update(map, entities, culture, simulationSpeed = 1) {
+        // Vieillir (affecté par la vitesse de simulation)
+        this.age += 0.01 * simulationSpeed;
 
         // Cooldown de reproduction
         if (this.reproductionCooldown > 0) {
-            this.reproductionCooldown -= 0.1;
+            this.reproductionCooldown -= 0.1 * simulationSpeed;
         }
 
-        // Consommer de l'énergie (modifié par métabolisme et culture)
+        // Consommer de l'énergie (modifié par métabolisme et culture ET vitesse de simulation)
         const metabolismFactor = this.genes.metabolism * (culture ? (1 / culture.modifiers.lifespanBonus) : 1);
-        this.energy -= 0.05 * metabolismFactor;
+        this.energy -= 0.05 * metabolismFactor * simulationSpeed;
 
-        // Augmenter la faim et la soif (modifié par culture)
-        this.hunger += 0.08;
+        // Augmenter la faim et la soif (modifié par culture ET vitesse de simulation)
+        this.hunger += 0.08 * simulationSpeed;
         const thirstRate = culture ? (0.06 * culture.modifiers.thirstReduction) : 0.06;
-        this.thirst += thirstRate;
+        this.thirst += thirstRate * simulationSpeed;
 
         // CLAMP toutes les valeurs
         this.energy = this.clamp(this.energy, 0, 100);
@@ -259,14 +259,14 @@ class Human extends Entity {
             return false; // Mort
         }
 
-        // Mettre à jour l'action en cours
-        this.updateCurrentAction();
+        // Mettre à jour l'action en cours (affecté par la vitesse de simulation)
+        this.updateCurrentAction(simulationSpeed);
 
         // Prendre des décisions
         this.decideBehavior(map, entities);
 
         // Exécuter le comportement
-        this.executeBehavior(map, entities, culture);
+        this.executeBehavior(map, entities, culture, simulationSpeed);
 
         return true; // Vivant
     }
@@ -274,9 +274,9 @@ class Human extends Entity {
     /**
      * Met à jour la progression de l'action en cours
      */
-    updateCurrentAction() {
+    updateCurrentAction(simulationSpeed = 1) {
         if (this.currentAction && this.actionDuration > 0) {
-            this.actionProgress += 1 / this.actionDuration;
+            this.actionProgress += (1 / this.actionDuration) * simulationSpeed;
 
             // Action terminée
             if (this.actionProgress >= 1) {
@@ -335,7 +335,7 @@ class Human extends Entity {
         }
     }
 
-    executeBehavior(map, entities, culture) {
+    executeBehavior(map, entities, culture, simulationSpeed = 1) {
         switch (this.state) {
             case 'searchingFood':
                 // Valider que la target existe toujours
@@ -345,7 +345,7 @@ class Human extends Entity {
                 }
 
                 if (this.targetEntity && this.targetEntity.type === 'tree') {
-                    if (this.moveTowards(this.targetEntity.x, this.targetEntity.y, culture)) {
+                    if (this.moveTowards(this.targetEntity.x, this.targetEntity.y, culture, simulationSpeed)) {
                         // Commencer l'action de manger
                         this.startAction('eating', 30); // 30 ticks pour manger
 
@@ -390,7 +390,7 @@ class Human extends Entity {
                 }
 
                 if (this.targetX !== null && this.targetY !== null) {
-                    if (this.moveTowards(this.targetX, this.targetY, culture)) {
+                    if (this.moveTowards(this.targetX, this.targetY, culture, simulationSpeed)) {
                         // Commencer l'action de boire
                         this.startAction('drinking', 20); // 20 ticks pour boire
 
@@ -411,7 +411,7 @@ class Human extends Entity {
 
             case 'building':
                 if (this.targetX !== null && this.targetY !== null) {
-                    if (this.moveTowards(this.targetX, this.targetY, culture)) {
+                    if (this.moveTowards(this.targetX, this.targetY, culture, simulationSpeed)) {
                         // Commencer l'action de construction
                         this.startAction('building', 60); // 60 ticks pour construire
 
@@ -438,15 +438,15 @@ class Human extends Entity {
                 break;
 
             case 'resting':
-                if (this.moveTowards(this.houseX, this.houseY, culture)) {
+                if (this.moveTowards(this.houseX, this.houseY, culture, simulationSpeed)) {
                     // Commencer l'action de repos
                     if (!this.currentAction) {
                         this.startAction('resting', 40); // 40 ticks pour se reposer
                     }
 
-                    // Récupérer de l'énergie (modifié par culture)
+                    // Récupérer de l'énergie (modifié par culture ET vitesse de simulation)
                     const restBonus = culture ? culture.modifiers.restBonus : 1.0;
-                    this.energy += 0.5 * restBonus;
+                    this.energy += 0.5 * restBonus * simulationSpeed;
                     this.energy = this.clamp(this.energy, 0, 100);
 
                     // Générer des RP
@@ -467,7 +467,7 @@ class Human extends Entity {
         return null;
     }
 
-    moveTowards(targetX, targetY, culture) {
+    moveTowards(targetX, targetY, culture, simulationSpeed = 1) {
         const dx = targetX - this.x;
         const dy = targetY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -477,7 +477,7 @@ class Human extends Entity {
         }
 
         const speedBonus = culture ? culture.modifiers.speedBonus : 1.0;
-        const speed = 0.3 * this.genes.speed * speedBonus;
+        const speed = 0.3 * this.genes.speed * speedBonus * simulationSpeed;
         this.x += (dx / distance) * speed;
         this.y += (dy / distance) * speed;
 
@@ -781,7 +781,7 @@ class EntityManager {
         }
     }
 
-    update(culture, eventLog, currentYear) {
+    update(culture, eventLog, currentYear, simulationSpeed = 1) {
         this.regrowTrees(culture);
 
         // Mettre à jour la culture
@@ -793,7 +793,7 @@ class EntityManager {
         const populationCap = culture ? culture.modifiers.populationCap : 10;
 
         for (let human of this.humans) {
-            const alive = human.update(this.map, this, culture);
+            const alive = human.update(this.map, this, culture, simulationSpeed);
 
             if (alive) {
                 newHumans.push(human);
