@@ -248,11 +248,15 @@ class Simulation {
     }
 
     render() {
-        // Dessiner la carte
-        this.map.render();
+        // Effacer le canvas (fond noir)
+        this.map.ctx.fillStyle = '#000000';
+        this.map.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Appliquer la transformation de la caméra pour le rendu du monde
+        // Appliquer la transformation de la caméra pour TOUT le rendu du monde
         this.camera.applyTransform(this.map.ctx);
+
+        // Dessiner la carte avec la transformation caméra
+        this.drawMapTiles();
 
         // NOUVEAU : Dessiner l'overlay des ressources (mines, forêts, rivières)
         if (this.showResources) {
@@ -274,6 +278,46 @@ class Simulation {
 
         // Restaurer le contexte après le rendu du monde
         this.camera.restoreTransform(this.map.ctx);
+    }
+
+    /**
+     * Dessine les tuiles de la carte (appelé avec transform caméra)
+     */
+    drawMapTiles() {
+        const ctx = this.map.ctx;
+        const tileSize = this.map.tileSize;
+
+        // Dessiner uniquement les tuiles visibles pour optimiser
+        const startX = Math.max(0, Math.floor(this.camera.x / tileSize) - 1);
+        const startY = Math.max(0, Math.floor(this.camera.y / tileSize) - 1);
+        const endX = Math.min(this.map.width, Math.ceil((this.camera.x + this.canvas.width / this.camera.zoom) / tileSize) + 1);
+        const endY = Math.min(this.map.height, Math.ceil((this.camera.y + this.canvas.height / this.camera.zoom) / tileSize) + 1);
+
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                const terrainType = this.map.grid[y][x];
+                let color = this.map.TERRAIN_COLORS[terrainType];
+
+                // Légère variation de couleur basée sur la heightmap
+                const height = this.map.heightMap[y][x];
+                const variation = (height % 0.15) - 0.075;
+
+                if (color && color.startsWith('#')) {
+                    const r = parseInt(color.substr(1, 2), 16);
+                    const g = parseInt(color.substr(3, 2), 16);
+                    const b = parseInt(color.substr(5, 2), 16);
+
+                    const newR = Math.max(0, Math.min(255, r + variation * 50));
+                    const newG = Math.max(0, Math.min(255, g + variation * 50));
+                    const newB = Math.max(0, Math.min(255, b + variation * 50));
+
+                    color = `rgb(${Math.floor(newR)}, ${Math.floor(newG)}, ${Math.floor(newB)})`;
+                }
+
+                ctx.fillStyle = color;
+                ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+            }
+        }
     }
 
     updateUI() {
