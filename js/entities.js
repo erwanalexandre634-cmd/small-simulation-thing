@@ -175,10 +175,10 @@ class Human extends Entity {
 
         this.id = Math.random().toString(36).substr(2, 9);
 
-        // Besoins (CLAMPED 0-100)
+        // Besoins (0 = bien, 100 = critique/mort)
         this.energy = 100;
-        this.hunger = 30;
-        this.thirst = 30;
+        this.hunger = 0;  // Commence sans faim
+        this.thirst = 0;  // Commence sans soif
 
         // Maison
         this.hasHouse = false;
@@ -251,11 +251,11 @@ class Human extends Entity {
 
         // Consommer de l'énergie (modifié par métabolisme et culture ET vitesse de simulation)
         const metabolismFactor = this.genes.metabolism * (culture ? (1 / culture.modifiers.lifespanBonus) : 1);
-        this.energy -= 0.05 * metabolismFactor * simulationSpeed;
+        this.energy -= 0.03 * metabolismFactor * simulationSpeed; // Réduit de 0.05 → 0.03
 
-        // Augmenter la faim et la soif (modifié par culture ET vitesse de simulation)
-        this.hunger += 0.08 * simulationSpeed;
-        const thirstRate = culture ? (0.06 * culture.modifiers.thirstReduction) : 0.06;
+        // Augmenter la faim et la soif (modifié par culture ET vitesse de simulation) - RALENTI
+        this.hunger += 0.04 * simulationSpeed; // Réduit de 0.08 → 0.04
+        const thirstRate = culture ? (0.03 * culture.modifiers.thirstReduction) : 0.03; // Réduit de 0.06 → 0.03
         this.thirst += thirstRate * simulationSpeed;
 
         // CLAMP toutes les valeurs
@@ -309,13 +309,13 @@ class Human extends Entity {
         // Ne pas changer d'état si une action est en cours
         if (this.currentAction) return;
 
-        // Priorité 1: Faim critique
-        if (this.hunger > 70 && this.state !== 'searchingFood') {
+        // Priorité 1: Faim critique (réagir PLUS TÔT)
+        if (this.hunger > 50 && this.state !== 'searchingFood') { // Réduit de 70 → 50
             this.state = 'searchingFood';
             this.findNearestTree(entities);
         }
-        // Priorité 2: Soif critique
-        else if (this.thirst > 70 && this.state !== 'searchingWater') {
+        // Priorité 2: Soif critique (réagir PLUS TÔT)
+        else if (this.thirst > 50 && this.state !== 'searchingWater') { // Réduit de 70 → 50
             this.state = 'searchingWater';
             this.findNearestWater(map);
         }
@@ -325,19 +325,19 @@ class Human extends Entity {
             this.targetX = this.houseX;
             this.targetY = this.houseY;
         }
-        // Priorité 4: Construire une maison
-        else if (!this.hasHouse && this.hunger < 50 && this.thirst < 50 && this.energy > 60) {
+        // Priorité 4: Construire une maison (si besoins OK)
+        else if (!this.hasHouse && this.hunger < 30 && this.thirst < 30 && this.energy > 60) { // Plus strict
             if (this.state !== 'building') {
                 this.state = 'building';
                 this.findBuildingSpot(map, entities);
             }
         }
-        // Gestion proactive
+        // Gestion proactive (chercher AVANT d'avoir faim)
         else if (this.state === 'idle') {
-            if (this.hunger > 40) {
+            if (this.hunger > 25) { // Réduit de 40 → 25
                 this.state = 'searchingFood';
                 this.findNearestTree(entities);
-            } else if (this.thirst > 40) {
+            } else if (this.thirst > 25) { // Réduit de 40 → 25
                 this.state = 'searchingWater';
                 this.findNearestWater(map);
             }
@@ -358,11 +358,11 @@ class Human extends Entity {
                         // Commencer l'action de manger
                         this.startAction('eating', 30); // 30 ticks pour manger
 
-                        // Après l'action
+                        // Après l'action - BIEN nourri !
                         const gatheringBonus = culture ? culture.modifiers.gatheringBonus : 1.0;
                         const foodEfficiency = culture ? culture.modifiers.foodEfficiency : 1.0;
-                        this.hunger -= 50 * this.genes.efficiency * gatheringBonus * foodEfficiency;
-                        this.energy += 20 * this.genes.efficiency;
+                        this.hunger -= 70 * this.genes.efficiency * gatheringBonus * foodEfficiency; // Augmenté de 50 → 70
+                        this.energy += 30 * this.genes.efficiency; // Augmenté de 20 → 30
                         this.hunger = this.clamp(this.hunger, 0, 100);
                         this.energy = this.clamp(this.energy, 0, 100);
 
@@ -407,7 +407,7 @@ class Human extends Entity {
                         // Commencer l'action de boire
                         this.startAction('drinking', 20); // 20 ticks pour boire
 
-                        this.thirst -= 60;
+                        this.thirst -= 80; // Augmenté de 60 → 80 (bien hydraté!)
                         this.thirst = this.clamp(this.thirst, 0, 100);
 
                         // Générer des RP
@@ -644,48 +644,40 @@ class Human extends Entity {
         ctx.lineTo(centerX + tileSize * 0.2, centerY + tileSize * 0.9);
         ctx.stroke();
 
-        // Indicateur d'état (couleur de la tête)
-        let stateColor = '#00ff00';
-        if (this.hunger > 70 || this.thirst > 70) stateColor = '#ff9800';
-        if (this.energy < 30) stateColor = '#ff0000';
+        // ENLEVÉ: Le cercle coloré "chelou" au centre de la tête
+        // On garde juste un humain simple et propre
 
-        ctx.fillStyle = stateColor;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY - tileSize * 0.3, tileSize * 0.15, 0, Math.PI * 2);
-        ctx.fill();
-
-        // BARRE D'ACTION au-dessus
-        this.drawActionBar(ctx, centerX, centerY - tileSize * 0.7, tileSize);
+        // BARRE D'ACTION subtile au-dessus (seulement si action en cours)
+        if (this.currentAction && this.actionProgress > 0) {
+            this.drawActionBar(ctx, centerX, centerY - tileSize * 0.8, tileSize);
+        }
     }
 
     /**
-     * Dessine la barre d'action au-dessus de l'humain
+     * Dessine la barre d'action SUBTILE au-dessus de l'humain
      */
     drawActionBar(ctx, x, y, tileSize) {
         if (!this.currentAction || this.actionProgress === 0) return;
 
-        const barWidth = tileSize * 0.8;
-        const barHeight = tileSize * 0.1;
+        const barWidth = tileSize * 0.6; // Réduit de 0.8 → 0.6
+        const barHeight = tileSize * 0.08; // Réduit de 0.1 → 0.08
 
-        // Couleur selon l'action
-        let barColor = '#00bcd4'; // Cyan par défaut
-        if (this.currentAction === 'drinking') barColor = '#2196F3'; // Bleu
-        if (this.currentAction === 'eating') barColor = '#4CAF50'; // Vert
-        if (this.currentAction === 'building') barColor = '#FF9800'; // Orange
-        if (this.currentAction === 'resting') barColor = '#9C27B0'; // Violet
+        // Couleur selon l'action (plus subtile avec alpha)
+        let barColor = 'rgba(0, 188, 212, 0.7)'; // Cyan
+        if (this.currentAction === 'drinking') barColor = 'rgba(33, 150, 243, 0.7)'; // Bleu
+        if (this.currentAction === 'eating') barColor = 'rgba(76, 175, 80, 0.7)'; // Vert
+        if (this.currentAction === 'building') barColor = 'rgba(255, 152, 0, 0.7)'; // Orange
+        if (this.currentAction === 'resting') barColor = 'rgba(156, 39, 176, 0.7)'; // Violet
 
-        // Fond de la barre
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        // Fond de la barre (très discret)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.fillRect(x - barWidth / 2, y, barWidth, barHeight);
 
         // Progression
         ctx.fillStyle = barColor;
         ctx.fillRect(x - barWidth / 2, y, barWidth * this.actionProgress, barHeight);
 
-        // Bordure
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x - barWidth / 2, y, barWidth, barHeight);
+        // Pas de bordure = plus propre
     }
 }
 
