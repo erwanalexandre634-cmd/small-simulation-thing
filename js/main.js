@@ -19,6 +19,9 @@ class Simulation {
         // Créer la carte avec continents réalistes
         this.map = new Map(this.canvas, 4);
 
+        // NOUVEAU : Système de caméra avec zoom et drag
+        this.camera = new Camera(this.canvas, this.map);
+
         // NOUVEAU : Système de ressources mondial
         this.resourceMap = new ResourceMap(this.map);
 
@@ -37,6 +40,11 @@ class Simulation {
         // Créer le gestionnaire d'entités
         this.entityManager = new EntityManager(this.map);
         this.entityManager.initialize();
+
+        // NOUVEAU : Panels UI
+        this.inspector = new HumanInspector(this.camera);
+        this.techTreeUI = new TechTreeUI(this.culture);
+        this.villagesPanel = new VillagesPanel(this.villageManager, this.camera);
 
         // État de la simulation
         this.isRunning = false;
@@ -98,6 +106,18 @@ class Simulation {
 
         this.elements.speed4Btn.addEventListener('click', () => {
             this.setSpeed(4);
+        });
+
+        // NOUVEAU : Détection du survol des humains pour l'inspector
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (this.inspector && this.entityManager.humans) {
+                const hoveredHuman = this.inspector.detectHover(e, this.entityManager.humans);
+                if (hoveredHuman) {
+                    this.inspector.inspectHuman(hoveredHuman, this.villageManager);
+                } else if (!this.inspector.selectedHuman) {
+                    this.inspector.showEmpty();
+                }
+            }
         });
     }
 
@@ -215,6 +235,14 @@ class Simulation {
             this.lastAge = this.culture.currentAge;
         }
 
+        // NOUVEAU : Mettre à jour les panels UI (tech tree, villages)
+        if (this.techTreeUI) {
+            this.techTreeUI.update();
+        }
+        if (this.villagesPanel) {
+            this.villagesPanel.update();
+        }
+
         // Mettre à jour l'UI
         this.updateUI();
     }
@@ -222,6 +250,9 @@ class Simulation {
     render() {
         // Dessiner la carte
         this.map.render();
+
+        // Appliquer la transformation de la caméra pour le rendu du monde
+        this.camera.applyTransform(this.map.ctx);
 
         // NOUVEAU : Dessiner l'overlay des ressources (mines, forêts, rivières)
         if (this.showResources) {
@@ -240,6 +271,9 @@ class Simulation {
 
         // Dessiner toutes les entités (arbres, rochers, maisons, humains)
         this.entityManager.draw(this.map.ctx, this.map.tileSize);
+
+        // Restaurer le contexte après le rendu du monde
+        this.camera.restoreTransform(this.map.ctx);
     }
 
     updateUI() {
