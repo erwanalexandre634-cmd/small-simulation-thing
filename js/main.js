@@ -1,12 +1,14 @@
 /**
  * ===================================
- * MAIN.JS - Contrôleur principal (VERSION AMÉLIORÉE)
+ * MAIN.JS - Contrôleur principal (VERSION COMPLÈTE)
  * ===================================
  *
- * Ajouts :
- * - Système de culture et recherche
+ * Systèmes intégrés :
+ * - Carte et ressources
+ * - Villages et territoires
+ * - Bâtiments et infrastructures
+ * - Culture et recherche étendue
  * - Journal d'événements
- * - Intégration complète
  */
 
 class Simulation {
@@ -17,10 +19,19 @@ class Simulation {
         // Créer la carte avec continents réalistes
         this.map = new Map(this.canvas, 4);
 
-        // NOUVEAU : Créer le système de culture
+        // NOUVEAU : Système de ressources mondial
+        this.resourceMap = new ResourceMap(this.map);
+
+        // NOUVEAU : Gestionnaire de bâtiments et infrastructures
+        this.buildingManager = new BuildingManager();
+
+        // NOUVEAU : Gestionnaire de villages
+        this.villageManager = new VillageManager();
+
+        // Système de culture étendu (8 âges, 45 technologies)
         this.culture = new Culture();
 
-        // NOUVEAU : Créer le journal d'événements
+        // Journal d'événements
         this.eventLog = new EventLog();
 
         // Créer le gestionnaire d'entités
@@ -33,6 +44,11 @@ class Simulation {
         this.speed = 1;
         this.lastFrameTime = 0;
         this.frameInterval = 1000 / 30; // 30 FPS
+
+        // Options d'affichage
+        this.showTerritories = true;
+        this.showResources = true;
+        this.showRoads = true;
 
         // Récupérer les éléments du DOM
         this.elements = {
@@ -153,11 +169,37 @@ class Simulation {
         // Mettre à jour la carte
         this.map.update();
 
+        // NOUVEAU : Mettre à jour les ressources (régénération naturelle)
+        this.resourceMap.update(this.culture);
+
         // Tracker la recherche actuelle pour détecter les changements
         const previousResearch = this.culture.currentResearchId;
 
         // Mettre à jour les entités (avec culture et event log)
         this.entityManager.update(this.culture, this.eventLog, this.currentYear);
+
+        // NOUVEAU : Mettre à jour les bâtiments
+        this.buildingManager.update(this.culture, this.eventLog);
+
+        // NOUVEAU : Détecter et former des villages automatiquement
+        const houses = this.entityManager.houses;
+        const humans = this.entityManager.humans;
+
+        if (houses.length >= 3 && Math.floor(this.currentYear) % 10 === 0) {
+            const newVillages = this.villageManager.detectAndFormVillages(
+                humans,
+                houses,
+                this.map,
+                Math.floor(this.currentYear)
+            );
+
+            newVillages.forEach(village => {
+                this.eventLog.logEvent(`🏘️ Nouveau village fondé : ${village.name}`, 'milestone');
+            });
+        }
+
+        // NOUVEAU : Mettre à jour les villages
+        this.villageManager.update(this.culture, this.map);
 
         // Détecter si une nouvelle recherche a commencé
         if (this.culture.currentResearchId !== previousResearch && this.culture.currentResearchId) {
@@ -165,6 +207,12 @@ class Simulation {
             if (tech) {
                 this.eventLog.logResearch(tech.name);
             }
+        }
+
+        // Détecter changement d'âge
+        if (this.culture.currentAge > (this.lastAge || 1)) {
+            this.eventLog.logEvent(`🎉 Nouvel âge atteint : Âge ${this.culture.currentAge}`, 'milestone');
+            this.lastAge = this.culture.currentAge;
         }
 
         // Mettre à jour l'UI
@@ -175,7 +223,22 @@ class Simulation {
         // Dessiner la carte
         this.map.render();
 
-        // Dessiner toutes les entités
+        // NOUVEAU : Dessiner l'overlay des ressources (mines, forêts, rivières)
+        if (this.showResources) {
+            this.resourceMap.drawOverlay(this.map.ctx, this.map.tileSize);
+        }
+
+        // NOUVEAU : Dessiner les territoires des villages
+        if (this.showTerritories) {
+            this.villageManager.draw(this.map.ctx, this.map.tileSize, true, true);
+        }
+
+        // NOUVEAU : Dessiner les routes et bâtiments
+        if (this.showRoads) {
+            this.buildingManager.draw(this.map.ctx, this.map.tileSize);
+        }
+
+        // Dessiner toutes les entités (arbres, rochers, maisons, humains)
         this.entityManager.draw(this.map.ctx, this.map.tileSize);
     }
 
@@ -195,7 +258,8 @@ class Simulation {
         if (this.elements.researchDisplay) {
             const currentResearch = this.culture.getCurrentResearch();
             if (currentResearch) {
-                this.elements.researchDisplay.textContent = currentResearch.name;
+                // Afficher avec l'icône et l'âge
+                this.elements.researchDisplay.textContent = `${currentResearch.icon || ''} ${currentResearch.name} (Âge ${currentResearch.age})`;
 
                 // Mettre à jour la barre de progression
                 if (this.elements.researchProgress) {
@@ -203,7 +267,7 @@ class Simulation {
                     this.elements.researchProgress.style.width = `${progress * 100}%`;
                 }
             } else {
-                this.elements.researchDisplay.textContent = 'Toutes les technologies débloquées';
+                this.elements.researchDisplay.textContent = '✨ Toutes les technologies débloquées !';
                 if (this.elements.researchProgress) {
                     this.elements.researchProgress.style.width = '100%';
                 }
