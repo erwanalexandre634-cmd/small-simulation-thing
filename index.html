@@ -3,73 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulateur d'Évolution - Base</title>
+    <title>Evolution Simulator - Genèse</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <!-- Titre principal -->
-        <header>
-            <h1>🧬 Simulateur d'Évolution</h1>
-            <p class="subtitle">Génération procédurale - Base du monde</p>
+    <!-- Fond animé avec particules -->
+    <div class="background-overlay"></div>
+
+    <div class="main-container">
+        <!-- Header avec titre et infos -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">
+                    <span class="title-icon">🌍</span>
+                    Evolution Simulator
+                </h1>
+                <p class="subtitle">Observez la genèse d'un nouveau monde</p>
+            </div>
+
+            <!-- Infos temps réel -->
+            <div class="stats-panel">
+                <div class="stat-item">
+                    <span class="stat-label">Année</span>
+                    <span class="stat-value" id="yearDisplay">0</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-label">Vitesse</span>
+                    <span class="stat-value speed-value" id="speedDisplay">x1</span>
+                </div>
+            </div>
         </header>
 
         <!-- Zone du canvas -->
-        <div class="canvas-container">
+        <div class="canvas-wrapper">
             <canvas id="mainCanvas" width="800" height="600"></canvas>
 
-            <!-- Overlay UI -->
-            <div class="ui-overlay">
-                <!-- Informations en haut à droite -->
-                <div class="info-panel">
-                    <div class="info-item">
-                        <span class="label">Année:</span>
-                        <span class="value" id="yearDisplay">0</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="label">Vitesse:</span>
-                        <span class="value" id="speedDisplay">x1</span>
-                    </div>
-                </div>
-
-                <!-- Contrôles en bas -->
-                <div class="controls-panel">
-                    <button id="playPauseBtn" class="btn btn-primary">
-                        <span id="playPauseIcon">▶️</span> <span id="playPauseText">Lancer</span>
-                    </button>
-
-                    <div class="btn-group">
-                        <button id="speed1Btn" class="btn btn-speed active">x1</button>
-                        <button id="speed2Btn" class="btn btn-speed">x2</button>
-                        <button id="speed4Btn" class="btn btn-speed">x4</button>
-                    </div>
-
-                    <button id="regenerateBtn" class="btn btn-secondary">
-                        🔄 Régénérer
-                    </button>
-                </div>
-            </div>
+            <!-- Bouton d'aide flottant -->
+            <button id="helpBtn" class="help-btn" title="Guide du simulateur">
+                📖
+            </button>
         </div>
 
-        <!-- Légende des biomes -->
-        <div class="legend">
-            <h3>Légende des biomes :</h3>
-            <div class="legend-items">
-                <div class="legend-item">
-                    <span class="legend-color" style="background: #2196F3;"></span>
-                    <span>Eau</span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-color" style="background: #FDD835;"></span>
-                    <span>Sable</span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-color" style="background: #4CAF50;"></span>
-                    <span>Plaine</span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-color" style="background: #757575;"></span>
-                    <span>Roche</span>
+        <!-- Contrôles principaux -->
+        <div class="controls-section">
+            <!-- Grand bouton principal Play/Pause -->
+            <button id="mainPlayBtn" class="main-play-btn">
+                <span class="play-icon" id="mainPlayIcon">▶</span>
+                <span class="play-text" id="mainPlayText">Evolution Simulator</span>
+                <div class="pulse-ring"></div>
+            </button>
+
+            <!-- Boutons de vitesse -->
+            <div class="speed-controls">
+                <span class="speed-label">Vitesse du temps :</span>
+                <div class="speed-buttons">
+                    <button class="speed-btn active" id="speed1Btn" data-speed="1">x1</button>
+                    <button class="speed-btn" id="speed2Btn" data-speed="2">x2</button>
+                    <button class="speed-btn" id="speed4Btn" data-speed="4">x4</button>
                 </div>
             </div>
         </div>
@@ -77,6 +71,7 @@
 
     <!-- Scripts -->
     <script src="js/map.js"></script>
+    <script src="js/ui/help.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>
