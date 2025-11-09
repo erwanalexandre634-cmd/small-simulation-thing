@@ -294,6 +294,16 @@ class Map {
      * Dessine la carte sur le canvas
      */
     render() {
+        if (!this.ctx) {
+            console.error('Canvas context not available');
+            return;
+        }
+
+        if (!this.grid || this.grid.length === 0) {
+            console.error('Map grid not generated');
+            return;
+        }
+
         // Fond noir
         this.ctx.fillStyle = '#000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -317,6 +327,8 @@ class Map {
                 );
             }
         }
+
+        console.log('Map rendered successfully');
     }
 
     /**
