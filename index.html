@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur d'Évolution - Base</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Titre principal -->
+        <header>
+            <h1>🧬 Simulateur d'Évolution</h1>
+            <p class="subtitle">Génération procédurale - Base du monde</p>
+        </header>
+
+        <!-- Zone du canvas -->
+        <div class="canvas-container">
+            <canvas id="mainCanvas" width="800" height="600"></canvas>
+
+            <!-- Overlay UI -->
+            <div class="ui-overlay">
+                <!-- Informations en haut à droite -->
+                <div class="info-panel">
+                    <div class="info-item">
+                        <span class="label">Année:</span>
+                        <span class="value" id="yearDisplay">0</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">Vitesse:</span>
+                        <span class="value" id="speedDisplay">x1</span>
+                    </div>
+                </div>
+
+                <!-- Contrôles en bas -->
+                <div class="controls-panel">
+                    <button id="playPauseBtn" class="btn btn-primary">
+                        <span id="playPauseIcon">▶️</span> <span id="playPauseText">Lancer</span>
+                    </button>
+
+                    <div class="btn-group">
+                        <button id="speed1Btn" class="btn btn-speed active">x1</button>
+                        <button id="speed2Btn" class="btn btn-speed">x2</button>
+                        <button id="speed4Btn" class="btn btn-speed">x4</button>
+                    </div>
+
+                    <button id="regenerateBtn" class="btn btn-secondary">
+                        🔄 Régénérer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Légende des biomes -->
+        <div class="legend">
+            <h3>Légende des biomes :</h3>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #2196F3;"></span>
+                    <span>Eau</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #FDD835;"></span>
+                    <span>Sable</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #4CAF50;"></span>
+                    <span>Plaine</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #757575;"></span>
+                    <span>Roche</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/map.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
