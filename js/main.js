@@ -19,6 +19,10 @@ class Simulation {
         // Créer la carte avec continents réalistes
         this.map = new Map(this.canvas, 4); // Taille de tuile : 4px
 
+        // Créer le gestionnaire d'entités (arbres, humains, etc.)
+        this.entityManager = new EntityManager(this.map);
+        this.entityManager.initialize();
+
         // État de la simulation
         this.isRunning = false;
         this.currentYear = 0;
@@ -30,6 +34,7 @@ class Simulation {
         this.elements = {
             yearDisplay: document.getElementById('yearDisplay'),
             speedDisplay: document.getElementById('speedDisplay'),
+            populationDisplay: document.getElementById('populationDisplay'),
             mainPlayBtn: document.getElementById('mainPlayBtn'),
             mainPlayIcon: document.getElementById('mainPlayIcon'),
             mainPlayText: document.getElementById('mainPlayText'),
@@ -173,6 +178,9 @@ class Simulation {
         // Mettre à jour la carte (pour le moment, statique)
         this.map.update();
 
+        // Mettre à jour toutes les entités (humains, arbres, etc.)
+        this.entityManager.update();
+
         // Mettre à jour l'interface
         this.updateUI();
     }
@@ -183,6 +191,9 @@ class Simulation {
     render() {
         // Dessiner la carte
         this.map.render();
+
+        // Dessiner toutes les entités (arbres, humains, maisons, rochers)
+        this.entityManager.draw(this.map.ctx, this.map.tileSize);
     }
 
     /**
@@ -194,6 +205,11 @@ class Simulation {
 
         // Afficher la vitesse
         this.elements.speedDisplay.textContent = `x${this.speed}`;
+
+        // Afficher la population
+        if (this.elements.populationDisplay) {
+            this.elements.populationDisplay.textContent = this.entityManager.getPopulation();
+        }
     }
 }
 

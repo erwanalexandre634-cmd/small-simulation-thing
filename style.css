@@ -151,6 +151,10 @@ body {
     color: var(--accent-green);
 }
 
+.population-value {
+    color: #ff9800; /* Orange pour la population humaine */
+}
+
 .stat-divider {
     width: 1px;
     background: rgba(255, 255, 255, 0.2);
