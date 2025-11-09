@@ -164,6 +164,39 @@ class HumanInspector {
                 </div>
             </div>
 
+            ${human.inventory ? `
+                <div class="inspector-section">
+                    <div class="inspector-label">🎒 Inventaire</div>
+                    <div class="inspector-inventory">
+                        <div class="inventory-item">
+                            <span class="inventory-icon">🌾</span>
+                            <span class="inventory-name">Nourriture</span>
+                            <span class="inventory-amount">${human.inventory.food || 0}</span>
+                        </div>
+                        <div class="inventory-item">
+                            <span class="inventory-icon">🪵</span>
+                            <span class="inventory-name">Bois</span>
+                            <span class="inventory-amount">${human.inventory.wood || 0}</span>
+                        </div>
+                        <div class="inventory-item">
+                            <span class="inventory-icon">🪨</span>
+                            <span class="inventory-name">Pierre</span>
+                            <span class="inventory-amount">${human.inventory.stone || 0}</span>
+                        </div>
+                        <div class="inventory-item">
+                            <span class="inventory-icon">⚙️</span>
+                            <span class="inventory-name">Fer</span>
+                            <span class="inventory-amount">${human.inventory.iron || 0}</span>
+                        </div>
+                        <div class="inventory-item">
+                            <span class="inventory-icon">💰</span>
+                            <span class="inventory-name">Or</span>
+                            <span class="inventory-amount">${human.inventory.gold || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
             <div class="inspector-section">
                 <div class="inspector-label">📍 Position</div>
                 <div class="inspector-position">

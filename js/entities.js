@@ -212,6 +212,15 @@ class Human extends Entity {
         this.currentAction = null; // 'drinking', 'eating', 'building', 'resting'
         this.actionProgress = 0; // 0..1
         this.actionDuration = 0; // Durée totale de l'action
+
+        // NOUVEAU : Inventaire/Loot
+        this.inventory = {
+            food: 0,
+            wood: 0,
+            stone: 0,
+            iron: 0,
+            gold: 0
+        };
     }
 
     mutateGenes() {
@@ -357,6 +366,10 @@ class Human extends Entity {
                         this.hunger = this.clamp(this.hunger, 0, 100);
                         this.energy = this.clamp(this.energy, 0, 100);
 
+                        // Ajouter de la nourriture à l'inventaire
+                        const foodGathered = Math.floor(5 * gatheringBonus);
+                        this.inventory.food += foodGathered;
+
                         // Supprimer l'arbre
                         const index = entities.trees.indexOf(this.targetEntity);
                         if (index !== -1) {
@@ -423,6 +436,10 @@ class Human extends Entity {
 
                         this.energy -= 20;
                         this.energy = this.clamp(this.energy, 0, 100);
+
+                        // Ajouter du bois et de la pierre à l'inventaire (ressources utilisées)
+                        this.inventory.wood += 10;
+                        this.inventory.stone += 5;
 
                         // Générer beaucoup de RP pour une construction
                         if (culture) {
