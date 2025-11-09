@@ -46,6 +46,9 @@ class Simulation {
 
         // Mettre à jour l'affichage initial
         this.updateUI();
+
+        // Effectuer le rendu initial de la carte
+        this.render();
     }
 
     /**
@@ -178,9 +181,8 @@ class Simulation {
      * Effectue le rendu
      */
     render() {
-        // Pour le moment, la carte est rendue une seule fois
-        // et ne change pas (statique)
-        // On pourra redessiner ici si la carte évolue (érosion, tectonique, etc.)
+        // Dessiner la carte
+        this.map.render();
     }
 
     /**
