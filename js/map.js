@@ -5,7 +5,7 @@
  *
  * Ce module gère :
  * - La génération procédurale de continents réalistes
- * - Multi-octave Perlin noise pour des masses terrestres cohérentes
+ * - Multi-octave noise pour des masses terrestres cohérentes
  * - Le rendu pixelisé sur le canvas
  */
 
@@ -39,11 +39,8 @@ class Map {
             3: '#777777'  // Roche - gris montagne
         };
 
-        // Paramètres de génération multi-octave
+        // Paramètres de génération
         this.seed = Math.random() * 10000;
-        this.octaves = 4; // Nombre de couches de bruit
-        this.persistence = 0.5; // Influence des octaves suivantes
-        this.lacunarity = 2.0; // Fréquence des octaves
 
         // Générer la carte initiale
         this.generate();
@@ -53,6 +50,8 @@ class Map {
      * Génère une nouvelle carte avec continents réalistes
      */
     generate() {
+        console.log('🗺️ Génération de la carte...');
+
         // Nouveau seed aléatoire
         this.seed = Math.random() * 10000;
 
@@ -67,128 +66,70 @@ class Map {
 
         // Dessiner la carte
         this.render();
+
+        console.log('✅ Carte générée avec succès !');
     }
 
     /**
-     * Génère une heightmap avec multi-octave Perlin noise
+     * Génère une heightmap avec multi-octave noise
      */
     generateHeightMap() {
         this.heightMap = [];
+        const octaves = 4;
+        const persistence = 0.5;
+        const scale = 50; // Échelle de base
 
         for (let y = 0; y < this.height; y++) {
             this.heightMap[y] = [];
             for (let x = 0; x < this.width; x++) {
+                let noiseValue = 0;
                 let amplitude = 1.0;
                 let frequency = 1.0;
-                let noiseHeight = 0;
-                let amplitudeSum = 0;
+                let maxValue = 0;
 
-                // Combiner plusieurs octaves de bruit
-                for (let i = 0; i < this.octaves; i++) {
-                    const sampleX = (x / this.width) * frequency;
-                    const sampleY = (y / this.height) * frequency;
+                // Combiner plusieurs octaves
+                for (let i = 0; i < octaves; i++) {
+                    const sampleX = (x / scale) * frequency;
+                    const sampleY = (y / scale) * frequency;
 
-                    const perlinValue = this.perlinNoise(sampleX, sampleY);
-                    noiseHeight += perlinValue * amplitude;
+                    const noise = this.improvedNoise(sampleX, sampleY);
+                    noiseValue += noise * amplitude;
 
-                    amplitudeSum += amplitude;
-                    amplitude *= this.persistence;
-                    frequency *= this.lacunarity;
+                    maxValue += amplitude;
+                    amplitude *= persistence;
+                    frequency *= 2;
                 }
 
-                // Normaliser
-                noiseHeight /= amplitudeSum;
+                // Normaliser entre 0 et 1
+                noiseValue = noiseValue / maxValue;
 
-                // Appliquer un gradient radial pour créer des îles/continents
-                // (optionnel : désactivé pour avoir une vraie carte de continents)
+                // Appliquer un gradient radial pour créer des continents
                 const centerX = this.width / 2;
                 const centerY = this.height / 2;
                 const distX = (x - centerX) / centerX;
                 const distY = (y - centerY) / centerY;
                 const distFromCenter = Math.sqrt(distX * distX + distY * distY);
 
-                // Appliquer un léger effet de bord (plus d'eau sur les bords)
-                const edgeFactor = Math.pow(distFromCenter, 1.2);
-                noiseHeight = noiseHeight * (1.0 - edgeFactor * 0.3);
+                // Gradient doux vers les bords
+                const edgeFactor = Math.pow(distFromCenter, 1.3);
+                noiseValue = noiseValue * (1.0 - edgeFactor * 0.4);
 
                 // Clamp entre 0 et 1
-                this.heightMap[y][x] = Math.max(0, Math.min(1, noiseHeight));
+                this.heightMap[y][x] = Math.max(0, Math.min(1, noiseValue));
             }
         }
     }
 
     /**
-     * Implémentation simplifiée de Perlin noise
+     * Fonction de bruit améliorée et simplifiée
      */
-    perlinNoise(x, y) {
-        // Grille de base
-        const x0 = Math.floor(x);
-        const x1 = x0 + 1;
-        const y0 = Math.floor(y);
-        const y1 = y0 + 1;
+    improvedNoise(x, y) {
+        // Utilise une combinaison de sinus/cosinus pour un bruit cohérent
+        const a = Math.sin(x * 3.14159 + y * 2.71828 + this.seed) * 0.5;
+        const b = Math.cos(x * 2.71828 + y * 1.41421 + this.seed * 2) * 0.3;
+        const c = Math.sin((x + y) * 1.73205 + this.seed * 3) * 0.2;
 
-        // Poids d'interpolation
-        const sx = x - x0;
-        const sy = y - y0;
-
-        // Interpolation avec smoothstep
-        const smoothX = this.smoothstep(sx);
-        const smoothY = this.smoothstep(sy);
-
-        // Vecteurs de gradient pseudo-aléatoires
-        const n0 = this.dotGridGradient(x0, y0, x, y);
-        const n1 = this.dotGridGradient(x1, y0, x, y);
-        const ix0 = this.lerp(n0, n1, smoothX);
-
-        const n2 = this.dotGridGradient(x0, y1, x, y);
-        const n3 = this.dotGridGradient(x1, y1, x, y);
-        const ix1 = this.lerp(n2, n3, smoothX);
-
-        const value = this.lerp(ix0, ix1, smoothY);
-
-        // Normaliser entre 0 et 1
-        return (value + 1) / 2;
-    }
-
-    /**
-     * Produit scalaire avec gradient pseudo-aléatoire
-     */
-    dotGridGradient(ix, iy, x, y) {
-        // Gradient pseudo-aléatoire
-        const random = this.pseudoRandom(ix, iy);
-        const angle = random * 2 * Math.PI;
-
-        const gradX = Math.cos(angle);
-        const gradY = Math.sin(angle);
-
-        // Vecteur de distance
-        const dx = x - ix;
-        const dy = y - iy;
-
-        // Produit scalaire
-        return dx * gradX + dy * gradY;
-    }
-
-    /**
-     * Générateur pseudo-aléatoire déterministe
-     */
-    pseudoRandom(x, y) {
-        const n = Math.sin(x * 12.9898 + y * 78.233 + this.seed) * 43758.5453123;
-        return n - Math.floor(n);
-    }
-
-    /**
-     * Interpolation linéaire
-     */
-    lerp(a, b, t) {
-        return a + t * (b - a);
-    }
-
-    /**
-     * Fonction de lissage (smoothstep)
-     */
-    smoothstep(t) {
-        return t * t * (3 - 2 * t);
+        return a + b + c;
     }
 
     /**
@@ -241,9 +182,8 @@ class Map {
                     const currentType = this.grid[y][x];
                     const maxCount = Math.max(...counts);
 
-                    // Lissage plus agressif pour les côtes
+                    // Lissage intelligent pour les côtes
                     if (currentType === this.TERRAIN_TYPES.SAND) {
-                        // Le sable reste sable s'il touche l'eau
                         const hasWater = neighbors.includes(this.TERRAIN_TYPES.WATER);
                         const hasGrass = neighbors.includes(this.TERRAIN_TYPES.GRASS);
 
@@ -255,10 +195,8 @@ class Map {
                             newGrid[y][x] = counts.indexOf(maxCount);
                         }
                     } else if (counts[currentType] < maxCount - 3) {
-                        // Changer pour le type dominant si très minoritaire
                         newGrid[y][x] = counts.indexOf(maxCount);
                     } else {
-                        // Garder le type actuel
                         newGrid[y][x] = currentType;
                     }
                 }
@@ -294,31 +232,27 @@ class Map {
      * Dessine la carte sur le canvas
      */
     render() {
-        if (!this.ctx) {
-            console.error('Canvas context not available');
-            return;
-        }
-
-        if (!this.grid || this.grid.length === 0) {
-            console.error('Map grid not generated');
-            return;
-        }
+        console.log('🎨 Rendu de la carte...');
 
         // Fond noir
-        this.ctx.fillStyle = '#000';
+        this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // Dessiner chaque tuile
         for (let y = 0; y < this.height; y++) {
             for (let x = 0; x < this.width; x++) {
                 const terrainType = this.grid[y][x];
-                const color = this.TERRAIN_COLORS[terrainType];
+                let color = this.TERRAIN_COLORS[terrainType];
 
-                // Variation de couleur pour plus de réalisme
-                const variation = (this.heightMap[y][x] % 0.1) * 0.2;
-                const adjustedColor = this.adjustBrightness(color, variation - 0.1);
+                // Légère variation de couleur basée sur la heightmap
+                const height = this.heightMap[y][x];
+                const variation = (height % 0.15) - 0.075; // Entre -0.075 et 0.075
 
-                this.ctx.fillStyle = adjustedColor;
+                if (variation !== 0) {
+                    color = this.adjustBrightness(color, variation);
+                }
+
+                this.ctx.fillStyle = color;
                 this.ctx.fillRect(
                     x * this.tileSize,
                     y * this.tileSize,
@@ -328,19 +262,28 @@ class Map {
             }
         }
 
-        console.log('Map rendered successfully');
+        console.log('✅ Rendu terminé !');
     }
 
     /**
      * Ajuste la luminosité d'une couleur hex
      */
     adjustBrightness(hex, amount) {
+        // Parse le hex
         const num = parseInt(hex.slice(1), 16);
-        const r = Math.max(0, Math.min(255, ((num >> 16) & 0xff) + amount * 255));
-        const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + amount * 255));
-        const b = Math.max(0, Math.min(255, (num & 0xff) + amount * 255));
 
-        return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+        // Extraire RGB
+        let r = (num >> 16) & 0xff;
+        let g = (num >> 8) & 0xff;
+        let b = num & 0xff;
+
+        // Ajuster
+        r = Math.max(0, Math.min(255, Math.floor(r + amount * 50)));
+        g = Math.max(0, Math.min(255, Math.floor(g + amount * 50)));
+        b = Math.max(0, Math.min(255, Math.floor(b + amount * 50)));
+
+        // Reconvertir en hex
+        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
 
     /**
